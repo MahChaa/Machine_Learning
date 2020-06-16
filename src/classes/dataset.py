@@ -14,6 +14,8 @@ from collections import Counter
 
 
 class DataSet:
+    model: dict
+
     def __init__(self, data_source: str, testing_set: str):
         # We skip the first column when creating the DataFrame since Pandas generates its own indices for all elements
         data = pd.read_csv("../resources/" + data_source, usecols=range(1, 10))
@@ -94,6 +96,9 @@ class DataSet:
         # The model file is created here in a .txt file
         with open("../resources/" + file_name, "w", encoding="UTF-8") as file:
 
+            # This variable is going to store all the data stored in the model file
+            self.model = {}
+
             # We scan through all the vocabulary acquired from the dataset titles
             for index, (word, frequency) in enumerate(self.training_words_frequency.items()):
 
@@ -119,6 +124,9 @@ class DataSet:
                     if self.poll_training_words_frequency.__contains__(word) else 0
                 poll_probability = (poll_frequency + 0.5) / (len(self.poll_training_words_frequency)
                                                              + (0.5 * len(self.training_words_frequency)))
+
+                self.model.update({word: (story_frequency, story_probability, ask_hn_frequency, ask_hn_probability,
+                                          show_hn_frequency, show_hn_probability, poll_frequency, poll_probability)})
 
                 print(index + 1, word,
                       story_frequency,
