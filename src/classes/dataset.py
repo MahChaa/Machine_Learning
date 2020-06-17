@@ -174,8 +174,6 @@ class DataSet:
 
                 self.confusion_matrix.loc[row["Post Type"], post_type_prediction] += 1
 
-                self.classification_accuracy = (np.diag(self.confusion_matrix).sum() / self.training_data_size) * 100
-
                 print(index - self.__test_sample_start_index + 1, row["Title"], post_type_prediction,
                       "%.7f" % score["story"],
                       "%.7f" % score["ask_hn"],
@@ -184,6 +182,8 @@ class DataSet:
                       row["Post Type"],
                       "right" if post_type_prediction == row["Post Type"] else "wrong",
                       sep="  ", file=file)
+
+            self.classification_accuracy = (np.diag(self.confusion_matrix).sum() / self.training_data_size) * 100
 
     def experiment_baseline(self) -> None:
         self.training_words_frequency = Counter(self.training_words)
