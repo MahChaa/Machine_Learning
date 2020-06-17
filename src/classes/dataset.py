@@ -7,6 +7,7 @@ import math
 import sys
 from collections import Counter
 import pandas as pd
+import numpy as np
 # word_tokenize will require
 # >>> import nltk
 # >>> nltk.download("punkt")
@@ -25,6 +26,8 @@ class DataSet:
     show_hn_training_words_frequency: dict
     poll_training_words: list
     poll_training_words_frequency: dict
+    confusion_matrix: pd.DataFrame
+    classification_accuracy: float
 
     def __init__(self, data_source: str, testing_set: str):
         # We skip the first column when creating the DataFrame since Pandas generates its own indices for all elements
@@ -135,6 +138,9 @@ class DataSet:
                       sep="  ", file=file)
 
     def classify(self, file_name: str) -> None:
+        self.confusion_matrix = pd.DataFrame(
+            {"story": [0, 0, 0, 0], "ask_hn": [0, 0, 0, 0], "show_hn": [0, 0, 0, 0], "poll": [0, 0, 0, 0]},
+            index=["story", "ask_hn", "show_hn", "poll"])
 
         # The classification results file is created here in a .txt file
         with open("../resources/" + file_name, "w", encoding="UTF-8") as file:
@@ -166,6 +172,10 @@ class DataSet:
                 else:
                     post_type_prediction = "poll"
 
+                self.confusion_matrix.loc[row["Post Type"], post_type_prediction] += 1
+
+                self.classification_accuracy = (np.diag(self.confusion_matrix).sum() / self.training_data_size) * 100
+
                 print(index - self.__test_sample_start_index + 1, row["Title"], post_type_prediction,
                       "%.7f" % score["story"],
                       "%.7f" % score["ask_hn"],
@@ -193,3 +203,8 @@ class DataSet:
         for word in list(self.training_words_frequency.keys()):
             if not min_size <= len(word) <= max_size:
                 del self.training_words_frequency[word]
+
+    def experiment_3(self):
+        self.experiment_baseline()
+
+
