@@ -180,6 +180,9 @@ class DataSet:
 
     def experiment_1(self, file_name: str) -> None:
         self.experiment_baseline()
+
         stop_words = list(pd.read_table("../resources/" + file_name, names=["Stop Words"])["Stop Words"])
 
-
+        for word in stop_words:
+            if word in self.training_words_frequency:
+                del self.training_words_frequency[word]
