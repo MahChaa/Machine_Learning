@@ -186,3 +186,10 @@ class DataSet:
         for word in stop_words:
             if word in self.training_words_frequency:
                 del self.training_words_frequency[word]
+
+    def experiment_2(self, min_size: int, max_size: int):
+        self.experiment_baseline()
+
+        for word in list(self.training_words_frequency.keys()):
+            if not min_size <= len(word) <= max_size:
+                del self.training_words_frequency[word]
