@@ -49,6 +49,22 @@ class DataSet:
         self.training_words = word_tokenize((self.training_data["Title"] + " ").sum())
         self.training_words.sort()
 
+        # These are the initial frequencies used to smooth the probabilities, the frequencies will be added onto them
+        self.training_types_frequency = {"story": 0.5, "ask_hn": 0.5, "show_hn": 0.5, "poll": 0.5}
+
+        # Pandas Series have built in functions to get the frequencies of equal values
+        # I turn it into a dictionary and iterate through it to extract the frequency of all post types
+        for post_type, frequency in dict(self.training_data["Post Type"].value_counts()).items():
+            self.training_types_frequency[post_type] += frequency
+
+        self.training_data_size = int(self.training_data["Object ID"].count())
+
+        self.training_types_probability = {"story": self.training_types_frequency["story"] / self.training_data_size,
+                                           "ask_hn": self.training_types_frequency["ask_hn"] / self.training_data_size,
+                                           "show_hn": self.training_types_frequency[
+                                                          "show_hn"] / self.training_data_size,
+                                           "poll": self.training_types_frequency["poll"] / self.training_data_size}
+
         self.experiment_baseline()
 
     def create_model(self, file_name: str) -> None:
@@ -135,22 +151,6 @@ class DataSet:
 
     def experiment_baseline(self) -> None:
         self.training_words_frequency = Counter(self.training_words)
-
-        # These are the initial frequencies used to smooth the probabilities, the frequencies will be added onto them
-        self.training_types_frequency = {"story": 0.5, "ask_hn": 0.5, "show_hn": 0.5, "poll": 0.5}
-
-        # Pandas Series have built in functions to get the frequencies of equal values
-        # I turn it into a dictionary and iterate through it to extract the frequency of all post types
-        for post_type, frequency in dict(self.training_data["Post Type"].value_counts()).items():
-            self.training_types_frequency[post_type] += frequency
-
-        self.training_data_size = int(self.training_data["Object ID"].count())
-
-        self.training_types_probability = {"story": self.training_types_frequency["story"] / self.training_data_size,
-                                           "ask_hn": self.training_types_frequency["ask_hn"] / self.training_data_size,
-                                           "show_hn": self.training_types_frequency[
-                                                          "show_hn"] / self.training_data_size,
-                                           "poll": self.training_types_frequency["poll"] / self.training_data_size}
 
         # Using Pandas DataFrame built-in functions, all the words in titles of each post type are extracted separately
         self.story_training_words = (self.training_data[self.training_data["Post Type"] == "story"]["Title"] + " ") \
