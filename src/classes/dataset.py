@@ -6,6 +6,7 @@
 import math
 import sys
 from collections import Counter
+import io
 import pandas as pd
 import numpy as np
 # word_tokenize will require
@@ -96,11 +97,12 @@ class DataSet:
 
         self.experiment_baseline()
 
-    def create_model(self, file_name: str) -> None:
+    def create_model(self, file_name: str = None) -> None:
+        # This variable is going to store all the data stored in the model file
+        self.model = {}
+
         # The model file is created here in a .txt file
-        with open("../resources/" + file_name, "w", encoding="UTF-8") as file:
-            # This variable is going to store all the data stored in the model file
-            self.model = {}
+        with io.StringIO() as output:
 
             # We scan through all the vocabulary acquired from the dataset titles
             for index, (word, frequency) in enumerate(self.training_words_frequency.items()):
@@ -135,15 +137,19 @@ class DataSet:
                       "%.7f" % show_hn_probability,
                       poll_frequency,
                       "%.7f" % poll_probability,
-                      sep="  ", file=file)
+                      sep="  ", file=output)
 
-    def classify(self, file_name: str) -> None:
+            if file_name is not None:
+                with open("../resources/" + file_name, "w", encoding="UTF-8") as file:
+                    print(output.getvalue(), file=file, end="")
+
+    def classify(self, file_name: str = None) -> None:
         self.confusion_matrix = pd.DataFrame(
             {"story": [0, 0, 0, 0], "ask_hn": [0, 0, 0, 0], "show_hn": [0, 0, 0, 0], "poll": [0, 0, 0, 0]},
             index=["story", "ask_hn", "show_hn", "poll"])
 
         # The classification results file is created here in a .txt file
-        with open("../resources/" + file_name, "w", encoding="UTF-8") as file:
+        with io.StringIO() as output:
 
             # The testing DataFrame is iterated through to extract all post titles
             for index, row in self.testing_data.iterrows():
@@ -181,9 +187,13 @@ class DataSet:
                       "%.7f" % score["poll"],
                       row["Post Type"],
                       "right" if post_type_prediction == row["Post Type"] else "wrong",
-                      sep="  ", file=file)
+                      sep="  ", file=output)
 
-            self.classification_accuracy = (np.diag(self.confusion_matrix).sum() / self.training_data_size) * 100
+            if file_name is not None:
+                with open("../resources/" + file_name, "w", encoding="UTF-8") as file:
+                    print(output.getvalue(), file=file, end="")
+
+        self.classification_accuracy = (np.diag(self.confusion_matrix).sum() / self.training_data_size) * 100
 
     def experiment_baseline(self) -> None:
         self.training_words_frequency = Counter(self.training_words)
@@ -191,7 +201,7 @@ class DataSet:
     def experiment_1(self, file_name: str) -> None:
         self.experiment_baseline()
 
-        stop_words = list(pd.read_table("../resources/" + file_name, names=["Stop Words"])["Stop Words"])
+        stop_words = pd.read_table("../resources/" + file_name, names=["Stop Words"])["Stop Words"]
 
         for word in stop_words:
             if word in self.training_words_frequency:
@@ -204,7 +214,13 @@ class DataSet:
             if not min_size <= len(word) <= max_size:
                 del self.training_words_frequency[word]
 
-    def experiment_3(self):
+    def experiment_3(self, frequency_threshold: list, percentile_threshold: list):
         self.experiment_baseline()
 
+        performance = []
+        vocabulary_size = []
 
+        for threshold in frequency_threshold:
+            for word, frequency in dict(self.training_words_frequency).items():
+                if frequency <= threshold:
+                    del self.training_words_frequency[word]
