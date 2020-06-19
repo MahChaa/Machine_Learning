@@ -50,6 +50,7 @@ class DataSet:
 
         # These are all the titles concatenated and separated with a space made into a list of all the words
         self.training_words = word_tokenize((self.training_data["Title"] + " ").sum())
+        self.training_words.sort()
 
         # These are the initial frequencies used to smooth the probabilities, the frequencies will be added onto them
         self.training_types_frequency = {"story": 0.5, "ask_hn": 0.5, "show_hn": 0.5, "poll": 0.5}
@@ -76,25 +77,19 @@ class DataSet:
         self.story_training_words = word_tokenize(self.story_training_words) \
             if isinstance(self.story_training_words, str) else []
 
-        # We create a Counter to count each word's frequency in titles separated by post types
-        self.story_training_words_frequency = Counter(self.story_training_words)
-
         self.ask_hn_training_words = (self.training_data[self.training_data["Post Type"] == "ask_hn"]["Title"] + " ") \
             .sum()
         self.ask_hn_training_words = word_tokenize(self.ask_hn_training_words) \
             if isinstance(self.ask_hn_training_words, str) else []
-        self.ask_hn_training_words_frequency = Counter(self.ask_hn_training_words)
 
         self.show_hn_training_words = (self.training_data[self.training_data["Post Type"] == "show_hn"]["Title"] + " ") \
             .sum()
         self.show_hn_training_words = word_tokenize(self.show_hn_training_words) \
             if isinstance(self.show_hn_training_words, str) else []
-        self.show_hn_training_words_frequency = Counter(self.show_hn_training_words)
 
         self.poll_training_words = (self.training_data[self.training_data["Post Type"] == "poll"]["Title"] + " ").sum()
         self.poll_training_words = word_tokenize(self.poll_training_words) if isinstance(self.poll_training_words, str) \
             else []
-        self.poll_training_words_frequency = Counter(self.poll_training_words)
 
         self.experiment_baseline()
 
@@ -115,19 +110,19 @@ class DataSet:
             story_frequency = self.story_training_words_frequency.get(word, 0)
 
             # This is the formula of conditional probability as is in the lecture notes
-            story_probability = (story_frequency + 0.5) / (len(self.story_training_words_frequency)
+            story_probability = (story_frequency + 0.5) / (sum(self.story_training_words_frequency.values())
                                                            + (0.5 * len(self.training_words_frequency)))
 
             ask_hn_frequency = self.ask_hn_training_words_frequency.get(word, 0)
-            ask_hn_probability = (ask_hn_frequency + 0.5) / (len(self.ask_hn_training_words_frequency)
+            ask_hn_probability = (ask_hn_frequency + 0.5) / (sum(self.ask_hn_training_words_frequency.values())
                                                              + (0.5 * len(self.training_words_frequency)))
 
             show_hn_frequency = self.show_hn_training_words_frequency.get(word, 0)
-            show_hn_probability = (show_hn_frequency + 0.5) / (len(self.show_hn_training_words_frequency)
+            show_hn_probability = (show_hn_frequency + 0.5) / (sum(self.show_hn_training_words_frequency.values())
                                                                + (0.5 * len(self.training_words_frequency)))
 
             poll_frequency = self.poll_training_words_frequency.get(word, 0)
-            poll_probability = (poll_frequency + 0.5) / (len(self.poll_training_words_frequency)
+            poll_probability = (poll_frequency + 0.5) / (sum(self.poll_training_words_frequency.values())
                                                          + (0.5 * len(self.training_words_frequency)))
 
             self.model.update({word: (story_frequency, story_probability, ask_hn_frequency, ask_hn_probability,
@@ -215,24 +210,28 @@ class DataSet:
     def experiment_baseline(self) -> None:
         removed_words = []
 
-        for index, word in enumerate(self.training_words):
-            # All the fully alphabetical words that start with an apostrophe (for some reason word_tokenize() would
-            # lump in the apostrophe with the word if it's at the beginning) are kept without their apostrophe
-            if len(word) > 1 and word[0] == "'" and word[1:].isalpha():
-                self.training_words[index] = word[1:]
-
-                # The apostrophe is added to the remove-words.txt
-                if not word[0] in removed_words:
-                    removed_words.append(word[0])
-
-        self.training_words.sort()
-
         self.training_words_frequency = Counter(self.training_words)
+
+        # We create a Counter to count each word's frequency in titles separated by post types
+        self.story_training_words_frequency = Counter(self.story_training_words)
+        self.ask_hn_training_words_frequency = Counter(self.ask_hn_training_words)
+        self.show_hn_training_words_frequency = Counter(self.show_hn_training_words)
+        self.poll_training_words_frequency = Counter(self.poll_training_words)
 
         # All words that aren't fully alphabetical are removed
         for word in list(self.training_words_frequency.keys()):
             if not word.isalpha():
                 del self.training_words_frequency[word]
+
+                # They are also removed from each post type's dictionary
+                if self.story_training_words_frequency.__contains__(word):
+                    del self.story_training_words_frequency[word]
+                if self.ask_hn_training_words_frequency.__contains__(word):
+                    del self.ask_hn_training_words_frequency[word]
+                if self.show_hn_training_words_frequency.__contains__(word):
+                    del self.show_hn_training_words_frequency[word]
+                if self.poll_training_words_frequency.__contains__(word):
+                    del self.poll_training_words_frequency[word]
 
                 removed_words.append(word)
 
@@ -254,6 +253,15 @@ class DataSet:
             if word in self.training_words_frequency:
                 del self.training_words_frequency[word]
 
+                if self.story_training_words_frequency.__contains__(word):
+                    del self.story_training_words_frequency[word]
+                if self.ask_hn_training_words_frequency.__contains__(word):
+                    del self.ask_hn_training_words_frequency[word]
+                if self.show_hn_training_words_frequency.__contains__(word):
+                    del self.show_hn_training_words_frequency[word]
+                if self.poll_training_words_frequency.__contains__(word):
+                    del self.poll_training_words_frequency[word]
+
     def experiment_2(self, min_size: int, max_size: int):
         self.experiment_baseline()
 
@@ -261,6 +269,15 @@ class DataSet:
         for word in list(self.training_words_frequency.keys()):
             if not min_size <= len(word) <= max_size:
                 del self.training_words_frequency[word]
+
+                if self.story_training_words_frequency.__contains__(word):
+                    del self.story_training_words_frequency[word]
+                if self.ask_hn_training_words_frequency.__contains__(word):
+                    del self.ask_hn_training_words_frequency[word]
+                if self.show_hn_training_words_frequency.__contains__(word):
+                    del self.show_hn_training_words_frequency[word]
+                if self.poll_training_words_frequency.__contains__(word):
+                    del self.poll_training_words_frequency[word]
 
     def experiment_3(self, frequency_threshold: list, percentile_threshold: list):
         self.experiment_baseline()
@@ -272,10 +289,19 @@ class DataSet:
         vocabulary_size = []
 
         # The experiment is repeated with a trimmed vocabulary at each iteration including the baseline at first
-        for threshold in [0] + frequency_threshold:
+        for threshold in frequency_threshold:
             for word, frequency in dict(self.training_words_frequency).items():
                 if frequency <= threshold:
                     del self.training_words_frequency[word]
+
+                    if self.story_training_words_frequency.__contains__(word):
+                        del self.story_training_words_frequency[word]
+                    if self.ask_hn_training_words_frequency.__contains__(word):
+                        del self.ask_hn_training_words_frequency[word]
+                    if self.show_hn_training_words_frequency.__contains__(word):
+                        del self.show_hn_training_words_frequency[word]
+                    if self.poll_training_words_frequency.__contains__(word):
+                        del self.poll_training_words_frequency[word]
 
             self.create_model()
             self.classify()
@@ -304,14 +330,28 @@ class DataSet:
         # The vocabulary is set back to the baseline before the second part of the experiment starts
         self.experiment_baseline()
 
-        for threshold in [0] + percentile_threshold:
+        # Since elements will be deleted from the vocabulary, its size should be saved as a reference
+        training_vocab_size = len(self.training_words_frequency)
+
+        for threshold in percentile_threshold:
             # The percentage is calculated from the list size as an index (all words below that index are deleted)
-            threshold_index = math.ceil(len(self.training_words_frequency) * threshold / 100)
+            # The index is always calculated relatively to the original size of the vocabulary
+            threshold_index = math.ceil(len(self.training_words_frequency)
+                                        - (training_vocab_size - (training_vocab_size * threshold / 100)))
 
             # Here the list of tuples (word, frequency) is sorted from most common to least so the threshold percentage
             # can be removed from the beginning of the list using  threshold_index
             for element in self.training_words_frequency.most_common()[:threshold_index]:
                 del self.training_words_frequency[element[0]]
+
+                if self.story_training_words_frequency.__contains__(element[0]):
+                    del self.story_training_words_frequency[element[0]]
+                if self.ask_hn_training_words_frequency.__contains__(element[0]):
+                    del self.ask_hn_training_words_frequency[element[0]]
+                if self.show_hn_training_words_frequency.__contains__(element[0]):
+                    del self.show_hn_training_words_frequency[element[0]]
+                if self.poll_training_words_frequency.__contains__(element[0]):
+                    del self.poll_training_words_frequency[element[0]]
 
             self.create_model()
             self.classify()
@@ -320,7 +360,7 @@ class DataSet:
 
         fig, plot = plt.subplots()
 
-        fig.suptitle("Words Removed on the Basis of Top Percentiles")
+        fig.suptitle("Words Removed on the Basis of Top Percentage")
 
         plot.plot(vocabulary_size, performance, "-bo")
 
