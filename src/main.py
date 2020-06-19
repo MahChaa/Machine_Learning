@@ -5,6 +5,7 @@
 # --------------------------------------------------------
 import time
 from classes.dataset import DataSet
+import matplotlib.pyplot as plt
 
 
 def main():
@@ -43,7 +44,15 @@ def main():
 
     print("\nTime to perform experiment 2: %.3f seconds" % (time.time() - loading_time))
 
-    print("\nThank you. Good bye.")
+    loading_time = time.time()
+
+    data.experiment_3([1, 5, 10, 15, 20], [5, 10, 15, 20, 25])
+
+    print("\nTime to perform experiment 3: %.3f seconds" % (time.time() - loading_time))
+
+    plt.show()
+
+    print("\nThank you. Goodbye.")
 
 
 if __name__ == "__main__":
