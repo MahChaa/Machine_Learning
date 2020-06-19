@@ -17,9 +17,6 @@ from nltk import word_tokenize
 class DataSet:
     model: dict
     training_words_frequency: Counter
-    training_types_frequency: dict
-    training_data_size: int
-    training_types_probability: dict
     story_training_words: list
     story_training_words_frequency: dict
     ask_hn_training_words: list
@@ -48,6 +45,51 @@ class DataSet:
         # These are all the titles concatenated and separated with a space made into a list of all the words
         self.training_words = word_tokenize((self.training_data["Title"] + " ").sum())
         self.training_words.sort()
+
+        # These are the initial frequencies used to smooth the probabilities, the frequencies will be added onto them
+        self.training_types_frequency = {"story": 0.5, "ask_hn": 0.5, "show_hn": 0.5, "poll": 0.5}
+
+        # Pandas Series have built in functions to get the frequencies of equal values
+        # I turn it into a dictionary and iterate through it to extract the frequency of all post types
+        for post_type, frequency in dict(self.training_data["Post Type"].value_counts()).items():
+            self.training_types_frequency[post_type] += frequency
+
+        self.training_data_size = int(self.training_data["Object ID"].count())
+
+        self.training_types_probability = {"story": self.training_types_frequency["story"] / self.training_data_size,
+                                           "ask_hn": self.training_types_frequency["ask_hn"] / self.training_data_size,
+                                           "show_hn": self.training_types_frequency[
+                                                          "show_hn"] / self.training_data_size,
+                                           "poll": self.training_types_frequency["poll"] / self.training_data_size}
+
+        # Using Pandas DataFrame built-in functions, all the words in titles of each post type are extracted separately
+        self.story_training_words = (self.training_data[self.training_data["Post Type"] == "story"]["Title"] + " ") \
+            .sum()
+
+        # Splitting only occurs if the resulting variable is a string, if it is not a string then it is 0
+        # which means that there was no occurrence found for that post type. We then assign to it an empty list
+        self.story_training_words = word_tokenize(self.story_training_words) \
+            if isinstance(self.story_training_words, str) else []
+
+        # We create a Counter to count each word's frequency in titles separated by post types
+        self.story_training_words_frequency = Counter(self.story_training_words)
+
+        self.ask_hn_training_words = (self.training_data[self.training_data["Post Type"] == "ask_hn"]["Title"] + " ") \
+            .sum()
+        self.ask_hn_training_words = word_tokenize(self.ask_hn_training_words) \
+            if isinstance(self.ask_hn_training_words, str) else []
+        self.ask_hn_training_words_frequency = Counter(self.ask_hn_training_words)
+
+        self.show_hn_training_words = (self.training_data[self.training_data["Post Type"] == "show_hn"]["Title"] + " ") \
+            .sum()
+        self.show_hn_training_words = word_tokenize(self.show_hn_training_words) \
+            if isinstance(self.show_hn_training_words, str) else []
+        self.show_hn_training_words_frequency = Counter(self.show_hn_training_words)
+
+        self.poll_training_words = (self.training_data[self.training_data["Post Type"] == "poll"]["Title"] + " ").sum()
+        self.poll_training_words = word_tokenize(self.poll_training_words) if isinstance(self.poll_training_words, str) \
+            else []
+        self.poll_training_words_frequency = Counter(self.poll_training_words)
 
         self.experiment_baseline()
 
@@ -136,52 +178,11 @@ class DataSet:
     def experiment_baseline(self) -> None:
         self.training_words_frequency = Counter(self.training_words)
 
-        # These are the initial frequencies used to smooth the probabilities, the frequencies will be added onto them
-        self.training_types_frequency = {"story": 0.5, "ask_hn": 0.5, "show_hn": 0.5, "poll": 0.5}
-
-        # Pandas Series have built in functions to get the frequencies of equal values
-        # I turn it into a dictionary and iterate through it to extract the frequency of all post types
-        for post_type, frequency in dict(self.training_data["Post Type"].value_counts()).items():
-            self.training_types_frequency[post_type] += frequency
-
-        self.training_data_size = int(self.training_data["Object ID"].count())
-
-        self.training_types_probability = {"story": self.training_types_frequency["story"] / self.training_data_size,
-                                           "ask_hn": self.training_types_frequency["ask_hn"] / self.training_data_size,
-                                           "show_hn": self.training_types_frequency[
-                                                          "show_hn"] / self.training_data_size,
-                                           "poll": self.training_types_frequency["poll"] / self.training_data_size}
-
-        # Using Pandas DataFrame built-in functions, all the words in titles of each post type are extracted separately
-        self.story_training_words = (self.training_data[self.training_data["Post Type"] == "story"]["Title"] + " ") \
-            .sum()
-
-        # Splitting only occurs if the resulting variable is a string, if it is not a string then it is 0
-        # which means that there was no occurrence found for that post type. We then assign to it an empty list
-        self.story_training_words = word_tokenize(self.story_training_words) \
-            if isinstance(self.story_training_words, str) else []
-
-        # We create a Counter to count each word's frequency in titles separated by post types
-        self.story_training_words_frequency = Counter(self.story_training_words)
-
-        self.ask_hn_training_words = (self.training_data[self.training_data["Post Type"] == "ask_hn"]["Title"] + " ") \
-            .sum()
-        self.ask_hn_training_words = word_tokenize(self.ask_hn_training_words) \
-            if isinstance(self.ask_hn_training_words, str) else []
-        self.ask_hn_training_words_frequency = Counter(self.ask_hn_training_words)
-
-        self.show_hn_training_words = (self.training_data[self.training_data["Post Type"] == "show_hn"]["Title"] + " ") \
-            .sum()
-        self.show_hn_training_words = word_tokenize(self.show_hn_training_words) \
-            if isinstance(self.show_hn_training_words, str) else []
-        self.show_hn_training_words_frequency = Counter(self.show_hn_training_words)
-
-        self.poll_training_words = (self.training_data[self.training_data["Post Type"] == "poll"]["Title"] + " ").sum()
-        self.poll_training_words = word_tokenize(self.poll_training_words) if isinstance(self.poll_training_words, str) \
-            else []
-        self.poll_training_words_frequency = Counter(self.poll_training_words)
-
     def experiment_1(self, file_name: str) -> None:
+        self.experiment_baseline()
+
         stop_words = list(pd.read_table("../resources/" + file_name, names=["Stop Words"])["Stop Words"])
 
-
+        for word in stop_words:
+            if word in self.training_words_frequency:
+                del self.training_words_frequency[word]
