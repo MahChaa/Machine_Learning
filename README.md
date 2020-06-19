@@ -15,7 +15,7 @@ install them manually.
 To be able to run word_tokenize() from nltk, you'll have to download some data from nltk.data
 It's simple, all you have to do is write this into the interpreter:
 >>> import nltk
->>> nltk.download("punkt")
+nltk.download("punkt")
 
 This will download the data at AppData\Roaming\nltk_data on your local machine (If you want to remove it after the fact)
 If you're on Mac, it should still display the download path in the interpreter.
